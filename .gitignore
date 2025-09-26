@@ -165,3 +165,16 @@ cython_debug/
 # ignore data folder
 data/
 artifacts/
+
+# macOS Finder metadata (folder view, icon positions, etc.) — never useful in repos
+.DS_Store
+
+# Apple “double files” (resource forks) created on non-Apple filesystems / zips
+._*
+
+# macOS metadata folders/files sometimes written on external/network volumes
+.AppleDouble     # per-directory Apple metadata
+.LSOverride      # Launch Services override
+.Spotlight-V100  # Spotlight index
+.Trashes         # Trash folder on removable drives
+
