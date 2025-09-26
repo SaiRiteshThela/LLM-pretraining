@@ -1,18 +1,44 @@
 import os, time, gzip, pickle, threading, psutil, cProfile, argparse
 from cs336_basics.bpe import train_bpe
 
-def measure_peak_rss_during(fn):
-    import os as _os
-    proc, peak, stop = psutil.Process(_os.getpid()), 0, False
+import psutil, time, threading, os
+
+def measure_peak_mem_tree_during(fn, interval=0.05, prefer_pss=True):
+    proc = psutil.Process(os.getpid())
+    peak = 0
+    stop = False
+
+    def _mem_bytes(p):
+        try:
+            if prefer_pss:
+                mfi = p.memory_full_info()  # exposes .pss on Linux
+                pss = getattr(mfi, "pss", None)
+                if pss is not None:
+                    return pss
+            return p.memory_info().rss
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return 0
+
+    def _tree_mem_bytes():
+        total = _mem_bytes(proc)
+        for ch in proc.children(recursive=True):
+            total += _mem_bytes(ch)
+        return total
+
     def sampler():
         nonlocal peak, stop
         while not stop:
-            peak = max(peak, proc.memory_info().rss); time.sleep(0.05)
-    t = threading.Thread(target=sampler, daemon=True); t.start()
+            peak = max(peak, _tree_mem_bytes())
+            time.sleep(interval)
+
+    t = threading.Thread(target=sampler, daemon=True)
+    t.start()
     try:
-        res = fn(); return res, peak
+        res = fn()
+        return res, peak
     finally:
-        stop = True; t.join()
+        stop = True
+        t.join()
 
 def safe_preview(b, n=80):
     s = b.decode("utf-8", errors="backslashreplace")
@@ -37,11 +63,11 @@ def main():
             res = train_bpe(INP, a.vocab_size, [a.special_token])
         pr.dump_stats(PROF); return res
 
-    (result, peak_rss) = measure_peak_rss_during(run_training)
+    (result, peak_rss) = measure_peak_mem_tree_during(run_training)
     vocab, merges = result
     tok_id, tok_bytes = max(vocab.items(), key=lambda kv: len(kv[1]))
 
-    print(f"[RSS peak] {peak_rss/1024/1024:.2f} MB")
+    print(f"[Peak RAM (tree, PSS/RSS)] {peak_rss/1024/1024:.2f} MB")
     print(f"[profile]  {PROF}")
     print("[longest token]")
     print(f"  id        : {tok_id}")
