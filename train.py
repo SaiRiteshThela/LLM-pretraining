@@ -140,7 +140,7 @@ for step in range(max_steps):
         ckpt_path = f'./artifacts/checkpoints/checkpoint_{step}'
         my_save_checkpoint(model, optimizer, step, ckpt_path)
         art = wandb.Artifact(f'checkpoint_{step}', type='model')
-        art.add_dir(ckpt_path)
+        art.add_file(ckpt_path)
         wandb.log_artifact(art)
 
     model.train()
@@ -183,7 +183,7 @@ if (max_steps - 1) % save_steps != 0:
     model.eval()
     my_save_checkpoint(model, optimizer, max_steps-1, final_ckpt)
     final_art = wandb.Artifact("checkpoints", type="model")
-    final_art.add_dir(final_ckpt)
+    final_art.add_file(final_ckpt)
     wandb.log_artifact(final_art)
 
 wandb.finish()
