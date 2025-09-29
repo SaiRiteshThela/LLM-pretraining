@@ -23,6 +23,7 @@ min_lr = max_lr*0.1
 warmups = 684
 max_steps = 34195
 print_steps = 300
+save_steps = 3000
 
 device = "cpu"
 if torch.cuda.is_available():
@@ -135,11 +136,12 @@ for step in range(max_steps):
 
         wandb.log({"step": step, "val/samples": wandb.Table(columns=["text"], data=samples)})
 
+    if step % save_steps == 0 and step != 0:
         ckpt_path = f'./artifacts/checkpoints/checkpoint_{step}'
         my_save_checkpoint(model, optimizer, step, ckpt_path)
-        artifact = wandb.Artifact("checkpoints", type="model")
-        artifact.add_dir('./artifacts/checkpoints', name=f"ckpt_step_{step}")
-        wandb.log_artifact(artifact)
+        art = wandb.Artifact(f'checkpoint_{step}', type='model')
+        art.add_dir(ckpt_path)
+        wandb.log_artifact(art)
 
     model.train()
     t0 = time.time()
@@ -174,5 +176,14 @@ for step in range(max_steps):
         "sys/dt_ms": float(dt),
         "sys/tokens_per_sec": float(tps),
     })
+
+if (max_steps - 1) % save_steps != 0:
+    final_ckpt = f'./artifacts/checkpoints/checkpoint_{max_steps-1}'
+    os.makedirs(final_ckpt, exist_ok=True)
+    model.eval()
+    my_save_checkpoint(model, optimizer, max_steps-1, final_ckpt)
+    final_art = wandb.Artifact("checkpoints", type="model")
+    final_art.add_dir(final_ckpt)
+    wandb.log_artifact(final_art)
 
 wandb.finish()
