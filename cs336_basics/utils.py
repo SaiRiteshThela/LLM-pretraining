@@ -67,13 +67,19 @@ def my_save_checkpoint(model, optimizer, iteration, out):
 
     torch.save(checkpoint, out)
 
-def my_load_checkpoint(src, model, optimizer):
-    checkpoint = torch.load(src)
-    model.load_state_dict(checkpoint['model'])
-    optimizer.load_state_dict(checkpoint['optimizer'])
-    iterator = checkpoint['iteration']
+def my_load_checkpoint(p, m, opt=None):
+    import torch
+    c = torch.load(p)
+    sd = c["model"]
+    if sd and next(iter(sd)).startswith("_orig_mod."):
+        sd = {k[10:]: v for k, v in sd.items()}  # strip "_orig_mod."
+    m.load_state_dict(sd, strict=False)
+    if opt and "optimizer" in c:
+        try: opt.load_state_dict(c["optimizer"])
+        except: pass
+    return c.get("iteration")
 
-    return iterator
+
 
 @torch.no_grad()
 def generate_seq(model, start_seq, max_gen_len=100, num_samples=4, p=1.0, temperature=1.0, device="cpu"):
