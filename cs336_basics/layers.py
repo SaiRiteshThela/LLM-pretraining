@@ -4,6 +4,7 @@ import math
 from cs336_basics.utils import my_scaled_dot_product_attention
 from dataclasses import dataclass
 from typing import Optional
+import torch.nn.functional as F
 
 
 @dataclass
@@ -216,7 +217,8 @@ class MyCausalMultiHeadAttentionWithRope(nn.Module):
         v = self.v_proj(x).view(*x.shape[:-1], self.num_heads, self.h_dim).transpose(-2, -3) # ... num_heads, seq_len, h_dim
         q = self.rope(q, token_positions)
         k = self.rope(k, token_positions)
-        out = my_scaled_dot_product_attention(q, k, v, self.mask[:, :T, :T]).transpose(-2, -3).contiguous().view(*x.shape)
+        #out = my_scaled_dot_product_attention(q, k, v, self.mask[:, :T, :T]).transpose(-2, -3).contiguous().view(*x.shape)
+        out = F.scaled_dot_product_attention(q, k, v, is_causal=True).transpose(-2, -3).contiguous().view(*x.shape)
         return self.output_proj(out)
     
 

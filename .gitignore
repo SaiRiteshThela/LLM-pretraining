@@ -165,6 +165,7 @@ cython_debug/
 # ignore data folder
 data/
 artifacts/
+wandb/
 
 # macOS Finder metadata (folder view, icon positions, etc.) — never useful in repos
 .DS_Store

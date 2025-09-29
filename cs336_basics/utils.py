@@ -74,3 +74,23 @@ def my_load_checkpoint(src, model, optimizer):
     iterator = checkpoint['iteration']
 
     return iterator
+
+@torch.no_grad()
+def generate_seq(model, start_seq, max_gen_len=100, num_samples=4, p=1.0, temperature=1.0, device="cpu"):
+    model.eval()
+    x = start_seq.to(device).long()
+    if x.dim() == 1: x = x[None, :]
+    x = x.repeat(num_samples, 1)
+
+    while x.size(1) < max_gen_len:
+        with torch.no_grad():
+            logits = model(x)[:, -1] / max(temperature, 1e-8)   # (B, V)
+        probs = logits.softmax(-1)
+        sp, si = probs.sort(-1, descending=True)
+        cp = sp.cumsum(-1)
+        sp[cp > p] = 0
+        sp /= sp.sum(-1, keepdim=True)
+        next_tok = torch.multinomial(sp, 1)
+        next_idx = si.gather(-1, next_tok)
+        x = torch.cat([x, next_idx], 1)
+    return x

@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 class MyDataLoader:
-    def __init__(self, source, B=32, T=128, E=1, device=None, seed=None, reshuffle_on_cycle=True, pin_memory=True):
+    def __init__(self, source, B=32, T=128, E=1, device=None, seed=None, reshuffle_on_cycle=True, pin_memory=True, split='train'):
         self.B, self.T = B, T
         self.step = B * T
         self.need = self.step + 1
@@ -31,20 +31,23 @@ class MyDataLoader:
 
         base = [i * self.step for i in range(n_batches)]
         self.idxs = base * max(1, int(E))
-
-        self._rng = random.Random(seed)
-        self._rng.shuffle(self.idxs)
+        self.split = split
+        if split != 'val':
+            self._rng = random.Random(seed)
+            self._rng.shuffle(self.idxs)
 
         self.i = 0
 
-        print(f'loaded {N} tokens')
-        print(f'number of batches in one epoch = {(N*E)//(B*T)}')
-
-    def next_batch(self):
-        if self.i >= len(self.idxs):
-            self.i = 0
+        print(f'loaded {N} tokens for {self.split}')
+        print(f'number of batches in one epoch = {(N*E)//(B*T)} for {self.split}')
+    def reset(self):
+        self.i = 0
+        if self.split != 'val':
             if self.reshuffle_on_cycle:
                 self._rng.shuffle(self.idxs)
+    def next_batch(self):
+        if self.i >= len(self.idxs):
+            self.reset()
 
         s = self.idxs[self.i]
         e = s + self.need
