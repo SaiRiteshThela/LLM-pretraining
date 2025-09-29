@@ -85,7 +85,6 @@ config = MyConfig(
 model = MyTransformer(config).to(device)
 model = torch.compile(model)
 
-# NOTE: fused=True only supported on CUDA. Make this conditional.
 optimizer = optim.AdamW(model.parameters(), lr=learning_rate, fused=torch.cuda.is_available())
 
 tiny_tokenizer = BPETokenizer.from_files(
@@ -179,10 +178,9 @@ for step in range(max_steps):
 
 if (max_steps - 1) % save_steps != 0:
     final_ckpt = f'./artifacts/checkpoints/checkpoint_{max_steps-1}'
-    os.makedirs(final_ckpt, exist_ok=True)
     model.eval()
     my_save_checkpoint(model, optimizer, max_steps-1, final_ckpt)
-    final_art = wandb.Artifact("checkpoints", type="model")
+    final_art = wandb.Artifact(f'checkpoint_{max_steps-1}', type="model")
     final_art.add_file(final_ckpt)
     wandb.log_artifact(final_art)
 
